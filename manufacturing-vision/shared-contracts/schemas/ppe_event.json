@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PPE_VIOLATION",
+  "description": "Emitted when a tracked person inside a PPE-required zone is missing required equipment. Model: Tanishjain9/yolov8n-ppe-detection-6classes. Supported items: helmet, vest, gloves.",
+  "allOf": [{ "$ref": "common/event_envelope.json" }],
+  "properties": {
+    "event_type":    { "const": "PPE_VIOLATION" },
+    "missing_ppe":   {
+      "type": "array",
+      "items": { "type": "string", "enum": ["helmet", "vest", "gloves"] },
+      "minItems": 1,
+      "description": "PPE items not detected on this person"
+    },
+    "required_ppe":  {
+      "type": "array",
+      "items": { "type": "string", "enum": ["helmet", "vest", "gloves"] },
+      "minItems": 1,
+      "description": "PPE items required by the zone policy"
+    }
+  },
+  "required": ["missing_ppe", "required_ppe"]
+}

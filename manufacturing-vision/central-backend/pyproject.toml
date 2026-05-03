@@ -1,0 +1,24 @@
+[project]
+name = "central-backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "alembic>=1.18.4",
+    "fastapi>=0.134.0",
+    "httpx>=0.28.1",
+    "loguru>=0.7.3",
+    "minio>=7.2.0",
+    "psycopg2-binary>=2.9.11",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.13.1",
+    "python-jose[cryptography]>=3.5.0",
+    "redis>=7.2.1",
+    "sqlalchemy>=2.0.47",
+    "sse-starlette>=2.2.1",
+    "uvicorn[standard]>=0.41.0",
+    "av>=14.0.0",
+    "pillow>=11.0.0",
+    "prometheus-fastapi-instrumentator>=2.3.0",
+]

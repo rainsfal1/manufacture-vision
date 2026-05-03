@@ -1,0 +1,24 @@
+[project]
+name = "perception-node"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "av>=16.1.0",
+    "loguru>=0.7.3",
+    "numpy>=2.4.2",
+    "onnx>=1.20.1",
+    "onnxruntime>=1.24.2",
+    "onnxslim>=0.1.86",
+    "opencv-python-headless>=4.13.0.92",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.13.1",
+    "redis>=7.2.1",
+    "rich>=14.3.3",
+    "supervision>=0.27.0.post1",
+    "ultralytics>=8.4.19",
+    "httpx>=0.28.1",
+    "minio>=7.2.0",
+    "prometheus-client>=0.22",
+]

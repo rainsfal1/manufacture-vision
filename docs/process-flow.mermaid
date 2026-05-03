@@ -1,0 +1,91 @@
+flowchart TD
+    %% Styles
+    classDef source fill:#e2f0d9,stroke:#548235,stroke-width:2px;
+    classDef adapter fill:#ffe6cc,stroke:#d79b00,stroke-width:2px;
+    classDef aiCore fill:#ddebf7,stroke:#2e75b6,stroke-width:2px;
+    classDef broker fill:#fff2cc,stroke:#d6b656,stroke-width:2px;
+    classDef backend fill:#fce4d6,stroke:#c55a11,stroke-width:2px;
+    classDef storage fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px;
+    classDef frontend fill:#e8d1ff,stroke:#7030a0,stroke-width:2px;
+    classDef integration fill:#f8cecc,stroke:#b85450,stroke-width:2px;
+
+    %% 1) Industrial Video Sources
+    subgraph Ingestion["1. Industrial Video Sources"]
+        direction LR
+        VMS["VMS/NVR (Milestone/Genetec/NVR)\nRTSP/SDK + ONVIF Discovery"]:::source
+        RTSP["Direct RTSP Cameras"]:::source
+        MP4["Mock Factory .mp4s"]:::source
+    end
+
+    %% 2) Stream Adapter (Ingest & Scheduling)
+    subgraph Adapter["2. Stream Adapter (Ingest & Scheduling)"]
+        direction TB
+        Read["Reader (pacing + timestamps/PTS)\nGStreamer / FFmpeg"]:::adapter
+        DualStream{"Dual-Stream Splitter"}:::adapter
+        Queue{"Bounded Queue\nKeep-latest (drop-oldest)"}:::adapter
+
+        Read --> DualStream
+        DualStream -- "Low-Res Substream\n(for AI speed)" --> Queue
+    end
+
+    %% 3) Edge Perception Node (AI Pipeline + Edge Eventing)
+    subgraph AICore["3. Edge Perception Node (AI Pipeline + Event Engine)"]
+        direction TB
+        Detect["ONNX Detector\nPeople/PPE/Hazards"]:::aiCore
+        Track["ByteTrack\nMulti-Object Tracking"]:::aiCore
+        Spatial["OpenCV\nZones/Tripwires/Homography (opt)"]:::aiCore
+        Rules["Edge Event Engine\nState + Debounce + Cooldowns"]:::aiCore
+
+        Ring["Ring Buffer\n(last N seconds, hi-res)"]:::aiCore
+        ClipExport["Clip Exporter\n(pre/post-event segment)"]:::aiCore
+        ClipUpload["Clip Uploader\n(S3 putObject)"]:::aiCore
+
+        Queue -- "(frame, PTS) tuples" --> Detect
+        Detect --> Track --> Spatial --> Rules
+
+        %% hi-res evidence path
+        DualStream -- "High-Res Mainstream\n(for evidence)" --> Ring
+        Rules -. "event trigger (t0..t1)" .-> ClipExport
+        Ring --> ClipExport --> ClipUpload
+    end
+
+    %% 4) Internal Spine + Integration Outputs
+    subgraph Boundary["4. Message Boundaries & Outputs"]
+        direction LR
+        Spine["Internal Event Spine\nRedis Streams (MVP) / NATS (Scale)"]:::broker
+        MQTT["MQTT / Webhook Adapter\n(Integration Output)"]:::integration
+    end
+
+    %% 5) Central Platform (FastAPI Hub)
+    subgraph Backend["5. Central Platform (FastAPI Hub)"]
+        direction TB
+        API["FastAPI\nIngest + Auth + Config"]:::backend
+        DB["PostgreSQL\nEvents + Audit + Config"]:::storage
+        MinIO["MinIO (S3)\nClip Storage (on-prem)"]:::storage
+        SSE["SSE Broadcaster"]:::backend
+
+        API --> DB
+        API --> SSE
+    end
+
+    %% 6) UI
+    subgraph UI["6. Control Room (Next.js)"]
+        direction TB
+        Dashboard["Factory Ops Dashboard"]:::frontend
+    end
+
+    %% Connections (Sources -> Adapter)
+    VMS & RTSP & MP4 ==> Read
+
+    %% Edge -> Central: event payload includes clip_ref after upload succeeds
+    ClipUpload -- "clip_ref" --> Rules
+    Rules == "Validated Event JSON\n(+ clip_ref when available)" ==> Spine
+    Rules -. "OT/Plant integrations\n(optional)" .-> MQTT
+
+    %% Media storage (direct from edge uploader)
+    ClipUpload --> MinIO
+
+    %% Central consumption + UI
+    Spine == "Consume Events" ==> API
+    SSE == "Live Updates" ==> Dashboard
+    Dashboard -. "Query history/config" .-> API

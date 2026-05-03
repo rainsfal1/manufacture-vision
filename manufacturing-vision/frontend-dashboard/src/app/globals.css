@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0a0a;
+  --s1: #111111;
+  --s2: #161616;
+  --s3: #1c1c1c;
+  --border: #242424;
+  --border2: #2e2e2e;
+  --text: #f0f0f0;
+  --text2: #888888;
+  --text3: #555555;
+  --green: #4ade80;
+  --green-dim: #22c55e;
+  --red: #f87171;
+  --red-dim: #ef4444;
+  --amber: #fbbf24;
+  --amber-dim: #d97706;
+  --blue: #3b82f6;
+  --cyan: #22d3ee;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  height: 100%;
+}
+
+body::-webkit-scrollbar { width: 0; }
+*::-webkit-scrollbar { width: 0; }
+
+@keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+@keyframes breathe-fast { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+@keyframes slide-in-r { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes spin { to { transform: rotate(360deg); } }

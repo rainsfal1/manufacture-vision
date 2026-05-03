@@ -1,0 +1,247 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - ../data/volumes/redis:/data
+    command: redis-server --appendonly yes
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: ../.env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ../data/volumes/postgres/data:/var/lib/postgresql/data
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    env_file: ../.env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - ../data/volumes/minio:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: server /data --console-address ":9001"
+
+  central-backend:
+    build:
+      context: ../central-backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      LOG_FORMAT: json
+      DATABASE_URL: postgresql://${POSTGRES_USER:-zayyan}:${POSTGRES_PASSWORD:-zayyan123}@postgres:5432/${POSTGRES_DB:-mvision}
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_PUBLIC_ENDPOINT: localhost:9000
+    ports:
+      - "8000:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  seed-snapshots:
+    build:
+      context: ../perception-node
+      dockerfile: Dockerfile
+    env_file: ../.env
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_BUCKET: vision-evidence
+    volumes:
+      - ../../demo-videos:/demo-videos:ro
+      - ../tools/seed_snapshots.py:/app/seed_snapshots.py:ro
+    entrypoint: ["python", "/app/seed_snapshots.py"]
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_healthy
+
+  perception-node-zone:
+    build:
+      context: ../perception-node
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      LOG_FORMAT: json
+      METRICS_PORT: "9091"
+      BACKEND_URL: http://central-backend:8000
+      SOURCE_ID: camera-01
+      INPUT_STREAM: /demo-videos/zone-detection.mp4
+      FRAME_SKIP: "5"
+      ORT_GLOBAL_THREAD_POOL_SIZE: "2"
+      OMP_NUM_THREADS: "2"
+      MKL_NUM_THREADS: "2"
+      OPENBLAS_NUM_THREADS: "2"
+      ENABLE_ZONE_INTRUSION: "true"
+      ENABLE_PPE_COMPLIANCE: "false"
+      ENABLE_FIRE_SMOKE: "false"
+    volumes:
+      - ../data:/data
+      - ../../demo-videos:/demo-videos:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  perception-node-helmet:
+    build:
+      context: ../perception-node
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      LOG_FORMAT: json
+      METRICS_PORT: "9092"
+      BACKEND_URL: http://central-backend:8000
+      SOURCE_ID: camera-02
+      INPUT_STREAM: /demo-videos/helmet.mp4
+      FRAME_SKIP: "5"
+      ORT_GLOBAL_THREAD_POOL_SIZE: "2"
+      OMP_NUM_THREADS: "2"
+      MKL_NUM_THREADS: "2"
+      OPENBLAS_NUM_THREADS: "2"
+      ENABLE_ZONE_INTRUSION: "false"
+      ENABLE_PPE_COMPLIANCE: "true"
+      ENABLE_FIRE_SMOKE: "false"
+    volumes:
+      - ../data:/data
+      - ../../demo-videos:/demo-videos:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  perception-node-no-helmet:
+    build:
+      context: ../perception-node
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      LOG_FORMAT: json
+      METRICS_PORT: "9093"
+      BACKEND_URL: http://central-backend:8000
+      SOURCE_ID: camera-03
+      INPUT_STREAM: /demo-videos/no-helmet-.mp4
+      FRAME_SKIP: "5"
+      ORT_GLOBAL_THREAD_POOL_SIZE: "2"
+      OMP_NUM_THREADS: "2"
+      MKL_NUM_THREADS: "2"
+      OPENBLAS_NUM_THREADS: "2"
+      ENABLE_ZONE_INTRUSION: "false"
+      ENABLE_PPE_COMPLIANCE: "true"
+      ENABLE_FIRE_SMOKE: "false"
+    volumes:
+      - ../data:/data
+      - ../../demo-videos:/demo-videos:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  perception-node-fire:
+    build:
+      context: ../perception-node
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      LOG_FORMAT: json
+      METRICS_PORT: "9094"
+      BACKEND_URL: http://central-backend:8000
+      SOURCE_ID: camera-04
+      INPUT_STREAM: /demo-videos/fire-detection.mp4
+      FRAME_SKIP: "5"
+      ORT_GLOBAL_THREAD_POOL_SIZE: "2"
+      OMP_NUM_THREADS: "2"
+      MKL_NUM_THREADS: "2"
+      OPENBLAS_NUM_THREADS: "2"
+      ENABLE_ZONE_INTRUSION: "false"
+      ENABLE_PPE_COMPLIANCE: "false"
+      ENABLE_FIRE_SMOKE: "true"
+    volumes:
+      - ../data:/data
+      - ../../demo-videos:/demo-videos:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  frontend-dashboard:
+    build:
+      context: ../frontend-dashboard
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://central-backend:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      central-backend:
+        condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3002:3000"
+    depends_on:
+      - prometheus
