@@ -33,6 +33,14 @@ class RingBuffer:
             end   = ts_ms + after_s  * 1000
             return [(pts, f.copy()) for pts, f in self._frames if start <= pts <= end]
 
+    def get_frame_at(self, pts_ms: float) -> np.ndarray | None:
+        """Returns a copy of the frame whose PTS is closest to pts_ms, or None if empty."""
+        with self._lock:
+            if not self._frames:
+                return None
+            closest = min(self._frames, key=lambda x: abs(x[0] - pts_ms))
+            return closest[1].copy()
+
     def size(self) -> int:
         with self._lock:
             return len(self._frames)

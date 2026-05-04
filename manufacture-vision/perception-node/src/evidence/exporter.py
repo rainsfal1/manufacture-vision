@@ -109,11 +109,6 @@ class ClipExporter:
 
         box_colour = _COLOUR_BOX_PPE if event_type == "PPE_VIOLATION" else _COLOUR_BOX_OK
 
-        # Zone polygon — always visible so reviewer can see the boundary
-        if zone_polygon:
-            pts = np.array(zone_polygon, np.int32).reshape((-1, 1, 2))
-            cv2.polylines(frame, [pts], isClosed=True, color=_COLOUR_ZONE, thickness=2)
-
         # Person bbox — only near the event frame, not on pre/post context frames
         near_event = (
             pts_ms is None
