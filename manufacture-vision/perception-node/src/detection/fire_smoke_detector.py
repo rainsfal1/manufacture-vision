@@ -73,8 +73,7 @@ class FireSmokeDetector:
         return blob, scale, left, top
 
     def _postprocess(self, outputs, scale, pad_left, pad_top) -> list:
-        # Model output: (1, 300, 6) — already NMS-filtered detections
-        # Each row: [x1, y1, x2, y2, confidence, class_id] in padded-model-input space
+        # Model outputs (1, 300, 6): NMS-filtered rows of [x1, y1, x2, y2, confidence, class_id]
         detections = outputs[0][0]  # (300, 6)
 
         confidences = detections[:, 4]

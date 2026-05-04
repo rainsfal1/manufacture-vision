@@ -38,7 +38,7 @@ class Settings(BaseSettings):
 
     # PPE Detection (Phase 2)
     PPE_MODEL_PATH: str = os.path.join(BASE_DIR, "perception-node/models/ppe_detector.onnx")
-    PPE_CONF_THRESH: float = 0.4
+    PPE_CONF_THRESH: float = 0.25
     PPE_VIOLATION_HYSTERESIS: int = 2    # consecutive frames required before firing (lowered for multi-node demo)
     PPE_VIOLATION_COOLDOWN_MS: float = 30_000  # 30s cooldown between re-fires
 

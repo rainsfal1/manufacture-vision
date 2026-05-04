@@ -140,15 +140,6 @@ def render_debug_overlay(frame, tracks, zones, output_video, event_messages):
         bottom_y = y2
         cv2.circle(frame, (int(center_x), int(bottom_y)), 5, (0, 0, 255), -1)
 
-    # Draw polygon zones
-    for zone in zones:
-        cv2.polylines(frame, [zone.polygon], True, (255, 0, 0), 2)
-        # Put zone label
-        M = cv2.moments(zone.polygon)
-        if M["m00"] != 0:
-            cX = int(M["m10"] / M["m00"])
-            cY = int(M["m01"] / M["m00"])
-            cv2.putText(frame, zone.zone_id, (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
 
     # Draw Event messages for 30 frames (simplified)
     # in an actual app you'd fade these or queue them.
@@ -317,7 +308,13 @@ def main():
 
                         # Run ONNX inference on first appearance and then every Nth frame
                         if _ppe_key not in _ppe_last_missing or _ppe_frame_counter[_ppe_key] % PPE_INFER_EVERY == 0:
-                            crop = ppe_detector.crop_person(frame, track.bbox)
+                            _native = ring_buffer.get_frame_at(pts_ms)
+                            if _native is not None:
+                                _ppe_s = dual_stream.native_wh[0] / settings.LOW_RES_WIDTH if dual_stream.native_wh else 1.0
+                                _native_bbox = [v * _ppe_s for v in track.bbox]
+                                crop = ppe_detector.crop_person(_native, _native_bbox)
+                            else:
+                                crop = ppe_detector.crop_person(frame, track.bbox)
                             wearing = ppe_detector.detect_ppe(crop, zone.required_ppe)
                             _ppe_last_missing[_ppe_key] = [
                                 item for item in zone.required_ppe if not wearing.get(item, False)
@@ -351,46 +348,41 @@ def main():
 
             # --- Fire/Smoke Logic ---
             if settings.ENABLE_FIRE_SMOKE:
-                fs_classes_by_zone = {z.zone_id: set() for z in zones}
-                fs_best_conf = {z.zone_id: {} for z in zones}
-                fs_best_bbox = {z.zone_id: {} for z in zones}
+                # Fire/smoke is a frame-level hazard — not restricted to PPE zones
+                fs_classes = set()
+                fs_best_conf = {}
+                fs_best_bbox = {}
 
                 for d in fs_detections:
-                    for zone in zones:
-                        if zone.check_zone_center(d["bbox"]):
-                            cls_name = d["class_name"]
-                            fs_classes_by_zone[zone.zone_id].add(cls_name)
-                            
-                            if d["confidence"] > fs_best_conf[zone.zone_id].get(cls_name, 0.0):
-                                fs_best_conf[zone.zone_id][cls_name] = d["confidence"]
-                                fs_best_bbox[zone.zone_id][cls_name] = d["bbox"]
-                
-                for zone in zones:
-                    zid = zone.zone_id
-                    fs_events = fs_state_machine.update(zid, fs_classes_by_zone[zid], pts_ms)
-                    for ev in fs_events:
-                        cls_name = "fire" if "FIRE" in ev else "smoke"
-                        msg = f"{ev} -> {zid} at {fs_best_conf[zid][cls_name]:.1f}% confidence"
-                        logger.warning(msg)
-                        event_messages.insert(0, msg)
-                        if len(event_messages) > 3:
-                            event_messages.pop()
-                        
-                        _s = (dual_stream.native_wh[0] / settings.LOW_RES_WIDTH
-                              if dual_stream.native_wh else 1.0)
-                        evidence_worker.submit(ev, {
-                            "event_ts_ms": pts_ms,
-                            "track_id": 0,
-                            "zone_id": zid,
-                            "bbox": [v * _s for v in fs_best_bbox[zid][cls_name]],
-                            "confidence": fs_best_conf[zid][cls_name],
-                            "detection_class": cls_name,
-                            "frame_confidence": fs_best_conf[zid][cls_name],
-                            "clip_pre_s": settings.FIRE_SMOKE_PRE_EVENT_S,
-                            "zone_polygon": zone.polygon.reshape(-1, 2).tolist(),
-                        })
-                        health.edge_events_emitted.labels(event_type=ev).inc()
-                        monitor.record_event(pts_ms)
+                    cls_name = d["class_name"]
+                    fs_classes.add(cls_name)
+                    if d["confidence"] > fs_best_conf.get(cls_name, 0.0):
+                        fs_best_conf[cls_name] = d["confidence"]
+                        fs_best_bbox[cls_name] = d["bbox"]
+
+                fs_events = fs_state_machine.update("frame", fs_classes, pts_ms)
+                for ev in fs_events:
+                    cls_name = "fire" if "FIRE" in ev else "smoke"
+                    msg = f"{ev} at {fs_best_conf[cls_name]:.1f}% confidence"
+                    logger.warning(msg)
+                    event_messages.insert(0, msg)
+                    if len(event_messages) > 3:
+                        event_messages.pop()
+
+                    _s = (dual_stream.native_wh[0] / settings.LOW_RES_WIDTH
+                          if dual_stream.native_wh else 1.0)
+                    evidence_worker.submit(ev, {
+                        "event_ts_ms": pts_ms,
+                        "track_id": 0,
+                        "zone_id": "frame",
+                        "bbox": [v * _s for v in fs_best_bbox[cls_name]],
+                        "confidence": fs_best_conf[cls_name],
+                        "detection_class": cls_name,
+                        "frame_confidence": fs_best_conf[cls_name],
+                        "clip_pre_s": settings.FIRE_SMOKE_PRE_EVENT_S,
+                    })
+                    health.edge_events_emitted.labels(event_type=ev).inc()
+                    monitor.record_event(pts_ms)
 
             # --- Telemetry & Debug ---
             # Simulate overload if env flag set (for acceptance testing)

@@ -7,24 +7,31 @@ from loguru import logger
 class PPEDetector:
     """
     Second-stage PPE attribute detector.
-    Model: Tanishjain9/yolov8n-ppe-detection-6classes (presence-only, 6 classes).
+    Model: Hansung-Cho/yolov8n-ppe-detection (10 classes, presence + absence).
 
     Runs on person crops produced by the primary PersonDetector.
-    An item is considered WORN if its class is detected above conf_thresh.
-    An item is considered MISSING if its class is NOT detected.
 
     Model class vocabulary:
-        0: Gloves   1: Vest   2: goggles   3: helmet   4: mask   5: safety_shoe
+        0: Hardhat        1: Mask         2: NO-Hardhat    3: NO-Mask
+        4: NO-Safety Vest 5: Person       6: Safety Cone   7: Safety Vest
+        8: machinery      9: vehicle
 
-    Config vocab → class index:
-        "helmet" → 3,  "vest" → 1,  "gloves" → 0
+    Decision logic per PPE item:
+        - Absence class detected  → MISSING  (explicit signal)
+        - Presence class detected → WEARING  (explicit signal)
+        - Neither detected        → WEARING  (benefit of doubt — model couldn't see clearly)
+        - Both detected           → WEARING  (presence wins)
     """
 
-    # Tanishjain9/yolov8n-ppe-detection-6classes indices
     PRESENCE_CLASS: dict[str, int] = {
-        "helmet": 3,
-        "vest":   1,
-        "gloves": 0,
+        "helmet": 0,   # Hardhat
+        "vest":   7,   # Safety Vest
+        "mask":   1,   # Mask
+    }
+    ABSENCE_CLASS: dict[str, int] = {
+        "helmet": 2,   # NO-Hardhat
+        "vest":   4,   # NO-Safety Vest
+        "mask":   3,   # NO-Mask
     }
 
     def __init__(self, model_path: str, conf_thresh: float = 0.4):
@@ -68,7 +75,7 @@ class PPEDetector:
         return frame[y1:y2, x1:x2]
 
     def _preprocess(self, img_bgr: np.ndarray):
-        """Letterbox + normalize to model input size (matches PersonDetector)."""
+        """Letterbox + normalize to model input size."""
         h, w = img_bgr.shape[:2]
         target_h = self.input_shape[2] if isinstance(self.input_shape[2], int) else 640
         target_w = self.input_shape[3] if isinstance(self.input_shape[3], int) else 640
@@ -91,7 +98,6 @@ class PPEDetector:
     def _postprocess(self, outputs) -> set[int]:
         """Return set of class_ids detected above conf_thresh."""
         preds = outputs[0][0].transpose(1, 0)  # (num_anchors, 4 + num_classes)
-        boxes = preds[:, :4]  # noqa: F841 — not needed for class-only logic
         scores = preds[:, 4:]
         class_ids = np.argmax(scores, axis=1)
         confidences = np.max(scores, axis=1)
@@ -102,22 +108,28 @@ class PPEDetector:
         """
         Returns {ppe_item: is_wearing} for each item in required_ppe.
 
-        An item is WORN if its presence class is detected above conf_thresh.
-        An item is MISSING if its presence class is not detected.
-        Unknown items (not in PRESENCE_CLASS) default to True (benefit of doubt).
+        Absence class detection → MISSING (explicit).
+        Presence class detection → WEARING (explicit).
+        Neither detected → WEARING (benefit of doubt).
+        Unknown items default to True.
         """
         if self.session is None:
             self.initialize()
 
         if crop.size == 0:
-            return {item: True for item in required_ppe}  # can't see crop → assume ok
+            return {item: True for item in required_ppe}
 
         blob = self._preprocess(crop)
         outputs = self.session.run(None, {self.input_name: blob})
-        detected_classes = self._postprocess(outputs)
+        detected = self._postprocess(outputs)
 
-        return {
-            item: (detected_classes.__contains__(self.PRESENCE_CLASS[item])
-                   if item in self.PRESENCE_CLASS else True)
-            for item in required_ppe
-        }
+        result = {}
+        for item in required_ppe:
+            if item not in self.PRESENCE_CLASS:
+                result[item] = True
+                continue
+            absent  = self.ABSENCE_CLASS[item] in detected
+            present = self.PRESENCE_CLASS[item] in detected
+            # Absence class is the explicit violation signal; presence wins ties
+            result[item] = (not absent) or present
+        return result
