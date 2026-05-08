@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M-VISION | AI Vision Platform for Manufacturing</title>
+    <meta name="description" content="M-VISION is an AI-powered industrial vision platform for manufacturing. It provides real-time PPE compliance monitoring, zone intrusion detection, and fire & smoke alerting, with edge inference and a centralized observability dashboard.">
+    <link rel="icon" type="image/svg+xml" href="assets/images/factory.svg">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style.css">
+    
+    <script src="https://unpkg.com/@studio-freight/lenis@1.0.34/dist/lenis.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+</head>
+<body>
+    <div class="noise-overlay"></div>
+
+    <main class="main-container">
+        <!-- Hero Section -->
+        <section class="section hero" id="home">
+            <header class="hero-header">
+                <h1 class="logo-main">M-VISION</h1>
+                <div class="header-details">
+                    <div class="header-left">
+                        <div class="barcode">
+                            <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                        </div>
+                        <div class="header-text-group">
+                            <p>INDUSTRIAL VISION PLATFORM</p>
+                            <p>: Next-Gen Edge Intelligence</p>
+                        </div>
+                    </div>
+                    <div class="header-right">
+                        <a href="https://github.com/rainsfal1/manufacture-vision/tree/master" class="btn-link" target="_blank">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                            OPEN SOURCE <span class="icon-plus">[+]</span>
+                        </a>
+                    </div>
+                </div>
+            </header>
+            
+            <div class="hero-image-container">
+                <img src="assets/images/hero.png" alt="M-VISION AI Platform" class="hero-img">
+            </div>
+
+
+        </section>
+
+
+
+        <!-- About Section (Now Observability) -->
+        <section class="section about" id="about">
+            <div class="about-header">
+                <p class="index-num">(01)</p>
+                <p class="section-label">: Observability</p>
+            </div>
+
+            <div class="about-grid">
+                <div class="about-left">
+                    <div class="barcode vertical">
+                        <span></span><span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                    <div class="about-image-wrapper">
+                        <img src="assets/images/minio.png" alt="MinIO Evidence Storage" class="about-img">
+                    </div>
+                </div>
+                
+                <div class="about-right">
+                    <div class="barcode right-align">
+                        <span></span><span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                    <h3 class="about-title split-text">INTEGRATED<br>SYSTEM<br>OBSERVABILITY</h3>
+                    
+                    <div class="about-content-bottom">
+                        <div class="about-desc">
+                            <p>Full-stack observability for edge deployments. Securely store high-fidelity event clips in MinIO while tracking real-time perception metrics through integrated Grafana dashboards.</p>
+                            <a href="#capabilities" class="btn-link mt-auto" data-scroll-to>CORE CAPABILITIES <span class="icon-plus">[+]</span></a>
+                        </div>
+                        <div class="small-image-wrapper">
+                            <img src="assets/images/grafana.png" alt="Grafana Performance Metrics" class="small-img">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- Dark Section: Capabilities & Features -->
+        <section class="section dark-section" id="capabilities">
+            <div class="dark-header">
+                <p class="index-num">(02)</p>
+                <p class="section-label">: Capabilities</p>
+            </div>
+
+            <div class="benefits-intro">
+                <h3 class="benefits-title split-text">AUTONOMOUS<br>VISION<br>INTELLIGENCE</h3>
+                <p class="benefits-desc fade-up">Deploy specialized AI models for high-stakes environments. Our edge perception nodes deliver zero-latency awareness for safety compliance, hazard detection, and operational optimization.</p>
+            </div>
+
+            <div class="accordion-list">
+                <div class="accordion-item fade-up active">
+                    <div class="acc-header">
+                        <div class="barcode small"><span></span><span></span><span></span><span></span><span></span></div>
+                        <div class="acc-num">01</div>
+                        <div class="acc-title">INTRUSION & PERIMETER AWARENESS.</div>
+                        <div class="acc-icon">[-]</div>
+                    </div>
+                    <div class="acc-content">
+                        <video src="assets/videos/zone-demo.mp4" autoplay loop muted playsinline class="acc-video"></video>
+                    </div>
+                </div>
+                <div class="accordion-item fade-up">
+                    <div class="acc-header">
+                        <div class="barcode small hidden"><span></span><span></span><span></span><span></span><span></span></div>
+                        <div class="acc-num">02</div>
+                        <div class="acc-title">WORKPLACE SAFETY & PPE COMPLIANCE.</div>
+                        <div class="acc-icon">[+]</div>
+                    </div>
+                    <div class="acc-content">
+                        <video src="assets/videos/ppe-demo.mp4" loop muted playsinline class="acc-video"></video>
+                    </div>
+                </div>
+                <div class="accordion-item fade-up">
+                    <div class="acc-header">
+                        <div class="barcode small hidden"><span></span><span></span><span></span><span></span><span></span></div>
+                        <div class="acc-num">03</div>
+                        <div class="acc-title">FIRE AND SMOKE DETECTION.</div>
+                        <div class="acc-icon">[+]</div>
+                    </div>
+                    <div class="acc-content">
+                        <video src="assets/videos/fire-demo.mp4" loop muted playsinline class="acc-video"></video>
+                    </div>
+                </div>
+                <div class="accordion-item fade-up">
+                    <div class="acc-header">
+                        <div class="barcode small hidden"><span></span><span></span><span></span><span></span><span></span></div>
+                        <div class="acc-num">04</div>
+                        <div class="acc-title">EDGE INFERENCE & CENTRAL DASHBOARD.</div>
+                        <div class="acc-icon">[+]</div>
+                    </div>
+                    <div class="acc-content">
+                        <video src="assets/videos/dashboard.mp4" loop muted playsinline class="acc-video"></video>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer Section -->
+        <footer class="section footer" id="contact">
+            <div class="footer-top">
+                <div class="footer-left">
+                    <h2 class="logo-large">M-VISION</h2>
+                </div>
+                <div class="footer-right">
+                </div>
+            </div>
+            
+            <div class="footer-middle">
+                <h2 class="location-text">EDGE TO CLOUD</h2>
+            </div>
+
+            <div class="footer-bottom">
+                <div class="contact-info">
+                    <p>SCALABLE EDGE ARCHITECTURE</p>
+                    <p>ENTERPRISE READY</p>
+                </div>
+                <div class="platform-info">
+                    <p>INDUSTRIAL-GRADE<br>VISION SOLUTIONS<br>FOR SMART FACTORIES</p>
+                </div>
+            </div>
+
+            <div class="footer-huge">
+                <h2 class="huge-text">AI VISION</h2>
+                <a href="https://github.com/rainsfal1/manufacture-vision/tree/master" target="_blank" class="footer-arrow-link">
+                    <svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg>
+                </a>
+            </div>
+        </footer>
+    </main>
+
+    <script src="assets/js/script.js"></script>
+</body>
+</html>
