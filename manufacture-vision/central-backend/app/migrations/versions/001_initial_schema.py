@@ -16,54 +16,70 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.create_table(
-        "events",
-        sa.Column("id", sa.Text, primary_key=True),
-        sa.Column("event_type", sa.Text, nullable=False),
-        sa.Column("event_ts_ms", sa.BigInteger, nullable=False),
-        sa.Column("source_id", sa.Text),
-        sa.Column("track_id", sa.Integer),
-        sa.Column("zone_id", sa.Text),
-        sa.Column("confidence", sa.Float),
-        sa.Column("bbox", sa.Text),
-        sa.Column("missing_ppe", sa.Text),
-        sa.Column("clip_ref", sa.Text),
-        sa.Column("received_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
-    )
-    op.create_index("ix_events_event_ts_ms", "events", ["event_ts_ms"])
-    op.create_index("ix_events_zone_id", "events", ["zone_id"])
-    op.create_index("ix_events_event_type", "events", ["event_type"])
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing = set(inspector.get_table_names())
 
-    op.create_table(
-        "zones",
-        sa.Column("id", sa.Text, primary_key=True),
-        sa.Column("zone_id", sa.Text, unique=True, nullable=False),
-        sa.Column("polygon", sa.Text),
-        sa.Column("required_ppe", sa.Text),
-        sa.Column("camera_id", sa.Text),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
-    )
+    if "events" not in existing:
+        op.create_table(
+            "events",
+            sa.Column("id", sa.Text, primary_key=True),
+            sa.Column("event_type", sa.Text, nullable=False),
+            sa.Column("event_ts_ms", sa.BigInteger, nullable=False),
+            sa.Column("source_id", sa.Text),
+            sa.Column("track_id", sa.Integer),
+            sa.Column("zone_id", sa.Text),
+            sa.Column("confidence", sa.Float),
+            sa.Column("bbox", sa.Text),
+            sa.Column("missing_ppe", sa.Text),
+            sa.Column("clip_ref", sa.Text),
+            sa.Column("received_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        )
+        op.create_index("ix_events_event_ts_ms", "events", ["event_ts_ms"])
+        op.create_index("ix_events_zone_id", "events", ["zone_id"])
+        op.create_index("ix_events_event_type", "events", ["event_type"])
+    else:
+        existing_indexes = {idx["name"] for idx in inspector.get_indexes("events")}
+        if "ix_events_event_ts_ms" not in existing_indexes:
+            op.create_index("ix_events_event_ts_ms", "events", ["event_ts_ms"])
+        if "ix_events_zone_id" not in existing_indexes:
+            op.create_index("ix_events_zone_id", "events", ["zone_id"])
+        if "ix_events_event_type" not in existing_indexes:
+            op.create_index("ix_events_event_type", "events", ["event_type"])
 
-    op.create_table(
-        "policies",
-        sa.Column("id", sa.Text, primary_key=True),
-        sa.Column("zone_id", sa.Text, nullable=False),
-        sa.Column("required_ppe", sa.Text),
-        sa.Column("active", sa.Boolean, server_default="true"),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
-    )
+    if "zones" not in existing:
+        op.create_table(
+            "zones",
+            sa.Column("id", sa.Text, primary_key=True),
+            sa.Column("zone_id", sa.Text, unique=True, nullable=False),
+            sa.Column("polygon", sa.Text),
+            sa.Column("required_ppe", sa.Text),
+            sa.Column("camera_id", sa.Text),
+            sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+            sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        )
 
-    op.create_table(
-        "audit_log",
-        sa.Column("id", sa.Text, primary_key=True),
-        sa.Column("actor", sa.Text),
-        sa.Column("action", sa.Text),
-        sa.Column("entity_type", sa.Text),
-        sa.Column("entity_id", sa.Text),
-        sa.Column("diff", sa.Text),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
-    )
+    if "policies" not in existing:
+        op.create_table(
+            "policies",
+            sa.Column("id", sa.Text, primary_key=True),
+            sa.Column("zone_id", sa.Text, nullable=False),
+            sa.Column("required_ppe", sa.Text),
+            sa.Column("active", sa.Boolean, server_default="true"),
+            sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        )
+
+    if "audit_log" not in existing:
+        op.create_table(
+            "audit_log",
+            sa.Column("id", sa.Text, primary_key=True),
+            sa.Column("actor", sa.Text),
+            sa.Column("action", sa.Text),
+            sa.Column("entity_type", sa.Text),
+            sa.Column("entity_id", sa.Text),
+            sa.Column("diff", sa.Text),
+            sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        )
 
 
 def downgrade() -> None:

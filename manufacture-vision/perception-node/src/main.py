@@ -126,28 +126,48 @@ def load_zones(path: str) -> list:
         logger.warning(f"Zone config not found at {path}. No zones active.")
     return zones
 
-def render_debug_overlay(frame, tracks, zones, output_video, event_messages):
-    """Draws overlays for Deliverable I verification."""
-    # Draw standard bounding boxes and IDs
+def render_debug_overlay(frame, tracks, fs_boxes, output_video):
+    """Draws overlays with proper white chamfered theming."""
+    def draw_chamfered_box(img, x1, y1, x2, y2, text):
+        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+        chamfer = 20
+        thickness = 2
+        color = (255, 255, 255)
+        
+        # Ensure chamfer isn't bigger than box
+        chamfer = min(chamfer, (x2 - x1) // 2, (y2 - y1) // 2)
+        
+        # Draw polygon lines
+        cv2.line(img, (x1 + chamfer, y1), (x2, y1), color, thickness)
+        cv2.line(img, (x2, y1), (x2, y2), color, thickness)
+        cv2.line(img, (x2, y2), (x1, y2), color, thickness)
+        cv2.line(img, (x1, y2), (x1, y1 + chamfer), color, thickness)
+        cv2.line(img, (x1, y1 + chamfer), (x1 + chamfer, y1), color, thickness)
+        
+        # Draw label box at bottom left
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.5
+        font_thick = 2
+        (tw, th), _ = cv2.getTextSize(text, font, font_scale, font_thick)
+        
+        lx1 = x1
+        ly1 = y2
+        lx2 = x1 + tw + 20
+        ly2 = y2 + th + 15
+        
+        cv2.rectangle(img, (lx1, y2), (lx2, ly2), (255, 255, 255), -1)
+        cv2.putText(img, text, (lx1 + 10, ly2 - 8), font, font_scale, (0, 0, 0), font_thick)
+
+    # Draw person tracks
     for t in tracks:
-        x1, y1, x2, y2 = [int(v) for v in t.bbox]
-        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        cv2.putText(frame, f"ID: {t.track_id} | Age: {t.age}", (x1, y1-10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-        
-        # Draw footpoints
-        center_x = x1 + (x2 - x1) / 2
-        bottom_y = y2
-        cv2.circle(frame, (int(center_x), int(bottom_y)), 5, (0, 0, 255), -1)
+        x1, y1, x2, y2 = t.bbox
+        draw_chamfered_box(frame, x1, y1, x2, y2, f"ID {t.track_id}")
 
+    # Draw fire/smoke boxes
+    for cls_name, bbox in fs_boxes.items():
+        x1, y1, x2, y2 = bbox
+        draw_chamfered_box(frame, x1, y1, x2, y2, cls_name.upper())
 
-    # Draw Event messages for 30 frames (simplified)
-    # in an actual app you'd fade these or queue them.
-    y_offset = 30
-    for msg in event_messages:
-        cv2.putText(frame, msg, (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 165, 255), 2)
-        y_offset += 30
-        
     if output_video:
         output_video.write(frame)
 
@@ -400,7 +420,10 @@ def main():
                 if out_video is None:
                     h, w = frame.shape[:2]
                     out_video = cv2.VideoWriter(settings.DEBUG_OUTPUT_PATH, cv2.VideoWriter_fourcc(*'mp4v'), settings.FPS_LIMIT, (w, h))
-                render_debug_overlay(frame.copy(), active_tracks, zones, out_video, event_messages)
+                
+                # Use empty list for person tracks since we only want fire boxes for this demo
+                fs_boxes = fs_best_bbox if 'fs_best_bbox' in locals() else {}
+                render_debug_overlay(frame.copy(), [], fs_boxes, out_video)
                 
     except KeyboardInterrupt:
         logger.info("Graceful shutdown requested.")

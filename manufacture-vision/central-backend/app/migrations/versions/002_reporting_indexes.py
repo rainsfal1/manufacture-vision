@@ -14,6 +14,7 @@ reporting endpoints efficient:
 """
 from typing import Sequence, Union
 
+import sqlalchemy as sa
 from alembic import op
 
 revision: str = "002"
@@ -23,8 +24,12 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.create_index("ix_events_type_ts", "events", ["event_type", "event_ts_ms"])
-    op.create_index("ix_events_zone_ts", "events", ["zone_id", "event_ts_ms"])
+    bind = op.get_bind()
+    existing_indexes = {idx["name"] for idx in sa.inspect(bind).get_indexes("events")}
+    if "ix_events_type_ts" not in existing_indexes:
+        op.create_index("ix_events_type_ts", "events", ["event_type", "event_ts_ms"])
+    if "ix_events_zone_ts" not in existing_indexes:
+        op.create_index("ix_events_zone_ts", "events", ["zone_id", "event_ts_ms"])
 
 
 def downgrade() -> None:
